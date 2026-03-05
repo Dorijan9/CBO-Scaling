@@ -1,0 +1,261 @@
+{
+  "description": "Extended: + Pentose phosphate pathway (H), Fatty acid oxidation (I)",
+  "variables": {
+    "A": {
+      "name": "Glycolytic flux",
+      "kegg_id": "hsa00010"
+    },
+    "B": {
+      "name": "TCA cycle activity",
+      "kegg_id": "hsa00020"
+    },
+    "C": {
+      "name": "Oxidative phosphorylation",
+      "kegg_id": "hsa00190"
+    },
+    "D": {
+      "name": "HIF-1 signalling",
+      "kegg_id": "hsa04066"
+    },
+    "E": {
+      "name": "PI3K-Akt signalling",
+      "kegg_id": "hsa04151"
+    },
+    "F": {
+      "name": "AMPK signalling",
+      "kegg_id": "hsa04152"
+    },
+    "G": {
+      "name": "mTOR signalling",
+      "kegg_id": "hsa04150"
+    },
+    "H": {
+      "name": "Pentose phosphate pathway",
+      "kegg_id": "hsa00030"
+    },
+    "I": {
+      "name": "Fatty acid oxidation",
+      "kegg_id": "hsa00071"
+    }
+  },
+  "topological_order": [
+    "F",
+    "E",
+    "G",
+    "D",
+    "I",
+    "A",
+    "H",
+    "B",
+    "C"
+  ],
+  "edges": [
+    {
+      "source": "D",
+      "target": "A",
+      "weight": 0.8,
+      "sign": "excitatory",
+      "evidence": "HIF-1 upregulates glycolytic enzymes"
+    },
+    {
+      "source": "D",
+      "target": "C",
+      "weight": -0.5,
+      "sign": "inhibitory",
+      "evidence": "HIF-1 suppresses OXPHOS via PDK1"
+    },
+    {
+      "source": "A",
+      "target": "B",
+      "weight": 0.7,
+      "sign": "excitatory",
+      "evidence": "Glycolysis feeds pyruvate to TCA"
+    },
+    {
+      "source": "B",
+      "target": "C",
+      "weight": 0.6,
+      "sign": "excitatory",
+      "evidence": "TCA NADH/FADH2 drives OXPHOS"
+    },
+    {
+      "source": "F",
+      "target": "E",
+      "weight": -0.45,
+      "sign": "inhibitory",
+      "evidence": "AMPK inhibits PI3K-Akt via TSC2 phosphorylation (KEGG hsa04152\u2192hsa04151)"
+    },
+    {
+      "source": "F",
+      "target": "A",
+      "weight": 0.5,
+      "sign": "excitatory",
+      "evidence": "AMPK activates glycolysis via PFK2 phosphorylation (KEGG hsa04152\u2192hsa00010)"
+    },
+    {
+      "source": "E",
+      "target": "G",
+      "weight": 0.7,
+      "sign": "excitatory",
+      "evidence": "PI3K-Akt activates mTORC1 via TSC2 inhibition (KEGG hsa04151\u2192hsa04150)"
+    },
+    {
+      "source": "G",
+      "target": "D",
+      "weight": 0.65,
+      "sign": "excitatory",
+      "evidence": "mTOR promotes HIF-1\u03b1 translation (KEGG hsa04150\u2192hsa04066)"
+    },
+    {
+      "source": "A",
+      "target": "H",
+      "weight": 0.55,
+      "sign": "excitatory",
+      "evidence": "G6P from glycolysis feeds PPP (KEGG hsa00010\u2192hsa00030)"
+    },
+    {
+      "source": "F",
+      "target": "I",
+      "weight": 0.6,
+      "sign": "excitatory",
+      "evidence": "AMPK activates fatty acid oxidation via ACC phosphorylation (KEGG hsa04152\u2192hsa00071)"
+    },
+    {
+      "source": "I",
+      "target": "B",
+      "weight": 0.45,
+      "sign": "excitatory",
+      "evidence": "FAO produces acetyl-CoA feeding TCA cycle (KEGG hsa00071\u2192hsa00020)"
+    }
+  ],
+  "adjacency_matrix": {
+    "order": [
+      "A",
+      "B",
+      "C",
+      "D",
+      "E",
+      "F",
+      "G",
+      "H",
+      "I"
+    ],
+    "matrix": [
+      [
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0
+      ],
+      [
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        1,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0
+      ],
+      [
+        1,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        1
+      ],
+      [
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    ]
+  },
+  "scm_parameters": {
+    "noise_variance": 0.3,
+    "weights": {
+      "w_DA": 0.8,
+      "w_DC": -0.5,
+      "w_AB": 0.7,
+      "w_BC": 0.6,
+      "w_FE": -0.45,
+      "w_FA": 0.5,
+      "w_EG": 0.7,
+      "w_GD": 0.65,
+      "w_AH": 0.55,
+      "w_FI": 0.6,
+      "w_IB": 0.45
+    }
+  }
+}

@@ -1,0 +1,276 @@
+{
+  "description": "Candidate graphs for 5var",
+  "variable_order": [
+    "A",
+    "B",
+    "C",
+    "D",
+    "E"
+  ],
+  "candidates": [
+    {
+      "id": "G1",
+      "confidence": 0.7,
+      "description": "Ground truth (KEGG baseline)",
+      "edges": [],
+      "adjacency_matrix": [
+        [
+          0,
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          1,
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          1,
+          0
+        ]
+      ],
+      "rationale": "Ground truth (KEGG baseline)"
+    },
+    {
+      "id": "G2",
+      "confidence": 0.6,
+      "description": "Remove D\u2192A",
+      "edges": [],
+      "adjacency_matrix": [
+        [
+          0,
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          1,
+          0
+        ]
+      ],
+      "rationale": "Remove D\u2192A"
+    },
+    {
+      "id": "G3",
+      "confidence": 0.55,
+      "description": "Remove B\u2192C",
+      "edges": [],
+      "adjacency_matrix": [
+        [
+          0,
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          1,
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          1,
+          0
+        ]
+      ],
+      "rationale": "Remove B\u2192C"
+    },
+    {
+      "id": "G4",
+      "confidence": 0.5,
+      "description": "Reverse D\u2192A",
+      "edges": [],
+      "adjacency_matrix": [
+        [
+          0,
+          1,
+          0,
+          1,
+          0
+        ],
+        [
+          0,
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          1,
+          0
+        ]
+      ],
+      "rationale": "Reverse D\u2192A"
+    },
+    {
+      "id": "G5",
+      "confidence": 0.45,
+      "description": "Add E\u2192C",
+      "edges": [],
+      "adjacency_matrix": [
+        [
+          0,
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          1,
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          1,
+          1,
+          0
+        ]
+      ],
+      "rationale": "Add E\u2192C"
+    },
+    {
+      "id": "G6",
+      "confidence": 0.4,
+      "description": "Add A\u2192C",
+      "edges": [],
+      "adjacency_matrix": [
+        [
+          0,
+          1,
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          1,
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          1,
+          0
+        ]
+      ],
+      "rationale": "Add A\u2192C"
+    }
+  ]
+}

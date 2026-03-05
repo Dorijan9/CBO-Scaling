@@ -1,0 +1,125 @@
+{
+  "description": "Base KEGG graph: PI3K-Akt \u2192 HIF-1 \u2192 Glycolysis \u2192 TCA \u2192 OXPHOS",
+  "variables": {
+    "A": {
+      "name": "Glycolytic flux",
+      "kegg_id": "hsa00010"
+    },
+    "B": {
+      "name": "TCA cycle activity",
+      "kegg_id": "hsa00020"
+    },
+    "C": {
+      "name": "Oxidative phosphorylation",
+      "kegg_id": "hsa00190"
+    },
+    "D": {
+      "name": "HIF-1 signalling",
+      "kegg_id": "hsa04066"
+    },
+    "E": {
+      "name": "PI3K-Akt signalling",
+      "kegg_id": "hsa04151"
+    }
+  },
+  "topological_order": [
+    "E",
+    "D",
+    "A",
+    "B",
+    "C"
+  ],
+  "edges": [
+    {
+      "source": "E",
+      "target": "D",
+      "weight": 0.75,
+      "sign": "excitatory",
+      "evidence": "PI3K-Akt activates HIF-1\u03b1 via mTOR translation"
+    },
+    {
+      "source": "D",
+      "target": "A",
+      "weight": 0.8,
+      "sign": "excitatory",
+      "evidence": "HIF-1 upregulates glycolytic enzymes HK2, PFK, LDHA"
+    },
+    {
+      "source": "D",
+      "target": "C",
+      "weight": -0.5,
+      "sign": "inhibitory",
+      "evidence": "HIF-1 suppresses OXPHOS via PDK1, BNIP3 mitophagy"
+    },
+    {
+      "source": "A",
+      "target": "B",
+      "weight": 0.7,
+      "sign": "excitatory",
+      "evidence": "Glycolysis produces pyruvate/acetyl-CoA feeding TCA"
+    },
+    {
+      "source": "B",
+      "target": "C",
+      "weight": 0.6,
+      "sign": "excitatory",
+      "evidence": "TCA generates NADH/FADH2 for OXPHOS electron transport"
+    }
+  ],
+  "adjacency_matrix": {
+    "order": [
+      "A",
+      "B",
+      "C",
+      "D",
+      "E"
+    ],
+    "matrix": [
+      [
+        0,
+        1,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        1,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        1,
+        0,
+        1,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        1,
+        0
+      ]
+    ]
+  },
+  "scm_parameters": {
+    "noise_variance": 0.3,
+    "weights": {
+      "w_ED": 0.75,
+      "w_DA": 0.8,
+      "w_DC": -0.5,
+      "w_AB": 0.7,
+      "w_BC": 0.6
+    }
+  }
+}
