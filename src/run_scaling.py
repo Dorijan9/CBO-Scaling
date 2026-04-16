@@ -74,6 +74,7 @@ def run_cbo_for_size(size_key: str, config: dict, seed: int = 42,
 
     iterations = []
     converged_at = None
+    intervention_counts = {}
 
     if verbose:
         method = "EIG" if use_eig else "Random"
@@ -89,11 +90,15 @@ def run_cbo_for_size(size_key: str, config: dict, seed: int = 42,
         # Select intervention
         if use_eig:
             target, eig_scores = select_intervention(
-                scm, belief, intv_val, n_sim, n_samples, seed=iter_seed
+                scm, belief, intv_val, n_sim, n_samples, seed=iter_seed,
+                intervention_counts=intervention_counts,
             )
         else:
             target = random_intervention(scm, seed=iter_seed)
             eig_scores = {}
+
+        # Track intervention history
+        intervention_counts[target] = intervention_counts.get(target, 0) + 1
 
         # Perform intervention
         intv_data = scm.sample_interventional(

@@ -54,20 +54,45 @@ class WeightPosterior:
         )
 
     def log_marginal_likelihood(self, X_parents: np.ndarray, y_child: np.ndarray) -> float:
-        """Log marginal likelihood with weights integrated out.
+        """Log marginal likelihood with weights integrated out from the PRIOR.
 
         P(y | X, G_k) = N(y | 0, sigma_eps^2 I + sigma_w^2 X X^T)
+
+        This is correct for the initial graph posterior update (no data seen yet).
+        After data has been observed, use log_predictive_likelihood instead.
         """
         n = len(y_child)
-        # Predictive covariance: sigma_eps^2 I + sigma_w^2 X X^T
         cov = self.sigma_eps2 * np.eye(n) + self.sigma_w2 * (X_parents @ X_parents.T)
-        cov += 1e-8 * np.eye(n)  # jitter for stability
+        cov += 1e-8 * np.eye(n)
 
         try:
             return float(multivariate_normal.logpdf(y_child, mean=np.zeros(n), cov=cov))
         except np.linalg.LinAlgError:
             cov += 1e-4 * np.eye(n)
             return float(multivariate_normal.logpdf(y_child, mean=np.zeros(n), cov=cov))
+
+    def log_predictive_likelihood(self, X_parents: np.ndarray, y_child: np.ndarray) -> float:
+        """Log predictive likelihood integrating out weights from the CURRENT POSTERIOR.
+
+        P(y_new | X_new, D_old, G_k) = N(y_new | X_new @ m, sigma_eps^2 I + X_new @ Sigma @ X_new^T)
+
+        where m and Sigma are the current posterior mean and covariance.
+        This accounts for what the agent has already learned about the weights,
+        making it the correct likelihood for EIG computation after iteration 0.
+        """
+        n = len(y_child)
+        # Posterior predictive mean: X_new @ m
+        pred_mean = X_parents @ self.mean
+        # Posterior predictive covariance: sigma_eps^2 I + X_new @ Sigma @ X_new^T
+        Sigma = self.covariance
+        cov = self.sigma_eps2 * np.eye(n) + X_parents @ Sigma @ X_parents.T
+        cov += 1e-8 * np.eye(n)
+
+        try:
+            return float(multivariate_normal.logpdf(y_child, mean=pred_mean, cov=cov))
+        except np.linalg.LinAlgError:
+            cov += 1e-4 * np.eye(n)
+            return float(multivariate_normal.logpdf(y_child, mean=pred_mean, cov=cov))
 
     def sample_weights(self, rng: np.random.Generator) -> np.ndarray:
         """Draw weights from current posterior."""
@@ -164,7 +189,7 @@ class GraphBelief:
 
     def compute_log_marginal_likelihood(self, graph_idx: int, data: np.ndarray,
                                          target_var: str) -> float:
-        """Log marginal likelihood P(D | G_k) integrating out weights.
+        """Log marginal likelihood P(D | G_k) integrating out weights from PRIOR.
 
         Decomposes across variables:
         log P(D | G_k) = sum_{j != target} log P(y_j | X_pa(j), G_k)
@@ -178,13 +203,38 @@ class GraphBelief:
             X_pa = self._get_parent_data(graph_idx, var, data)
 
             if X_pa is None:
-                # Root variable: P(x_j) = N(0, 1)
                 ll += norm.logpdf(y, 0, 1.0).sum()
             else:
-                # Marginal likelihood integrating out weights
                 wp = self.weight_posteriors[graph_idx].get(var)
                 if wp is not None:
                     ll += wp.log_marginal_likelihood(X_pa, y)
+                else:
+                    ll += norm.logpdf(y, 0, np.sqrt(self.sigma_eps2)).sum()
+        return ll
+
+    def compute_log_predictive_likelihood(self, graph_idx: int, data: np.ndarray,
+                                           target_var: str) -> float:
+        """Log predictive likelihood using CURRENT POSTERIOR over weights.
+
+        P(D_new | D_old, G_k) = sum_{j != target} log P(y_j | X_pa(j), w_posterior, G_k)
+
+        This uses the posterior predictive distribution, accounting for what
+        the agent has already learned. Used by EIG for intervention selection.
+        """
+        ll = 0.0
+        for var in self.variable_order:
+            if var == target_var:
+                continue
+            j = self.var_to_idx[var]
+            y = data[:, j]
+            X_pa = self._get_parent_data(graph_idx, var, data)
+
+            if X_pa is None:
+                ll += norm.logpdf(y, 0, 1.0).sum()
+            else:
+                wp = self.weight_posteriors[graph_idx].get(var)
+                if wp is not None:
+                    ll += wp.log_predictive_likelihood(X_pa, y)
                 else:
                     ll += norm.logpdf(y, 0, np.sqrt(self.sigma_eps2)).sum()
         return ll
@@ -195,6 +245,8 @@ class GraphBelief:
 
         1. Update weight posteriors for each graph given all accumulated data
         2. Compute marginal likelihood for each graph on interventional data
+           (integrating weights from the PRIOR — this is the correct Bayesian
+           scoring for graph discrimination via Occam's razor)
         3. Update graph belief: posterior proportional to marginal_lik * prior
         """
         est_data = all_data if all_data is not None else intv_data
