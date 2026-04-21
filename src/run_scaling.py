@@ -66,7 +66,7 @@ def run_cbo_for_size(size_key: str, config: dict, seed: int = 42,
     intv_val = scm_cfg["intervention_value"]
 
     obs_data = scm.sample_observational(scm_cfg["n_observational_samples"], seed=seed)
-    all_intv_data = []
+    intervention_history = []
 
     n_vars = len(scm.variables)
     n_edges = len(graph_def["edges"])
@@ -104,12 +104,11 @@ def run_cbo_for_size(size_key: str, config: dict, seed: int = 42,
         intv_data = scm.sample_interventional(
             target, intv_val, n_samples, seed=iter_seed + 1
         )
-        all_intv_data.append(intv_data)
-        combined_data = np.vstack([obs_data] + all_intv_data)
+        intervention_history.append((target, intv_data))
 
         # Update
         old_belief = belief.belief.copy()
-        new_belief = belief.update(intv_data, target, combined_data)
+        new_belief = belief.update(obs_data, intervention_history)
 
         # Evaluate
         map_idx = belief.map_estimate()
