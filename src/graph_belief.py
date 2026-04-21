@@ -174,19 +174,6 @@ class GraphBelief:
         pidx = [self.var_to_idx[p] for p in parents]
         return data[:, pidx]
 
-    def update_weight_posteriors(self, graph_idx: int, data: np.ndarray,
-                                 target_var: str):
-        """Update weight posteriors for graph_idx given accumulated data."""
-        for var in self.variable_order:
-            if var == target_var:
-                continue
-            X_pa = self._get_parent_data(graph_idx, var, data)
-            if X_pa is None:
-                continue
-            j = self.var_to_idx[var]
-            y = data[:, j]
-            self.weight_posteriors[graph_idx][var].update(X_pa, y)
-
     def compute_log_marginal_likelihood(self, graph_idx: int, data: np.ndarray,
                                          target_var: str) -> float:
         """Log marginal likelihood P(D | G_k) integrating out weights from PRIOR.
@@ -239,28 +226,87 @@ class GraphBelief:
                     ll += norm.logpdf(y, 0, np.sqrt(self.sigma_eps2)).sum()
         return ll
 
-    def update(self, intv_data: np.ndarray, target_var: str,
-               all_data: np.ndarray = None) -> np.ndarray:
-        """Bayesian update over graphs and weights.
+    def _get_valid_data_for_var(self, var, obs_data, intervention_history, _cache=None):
+        """Return the subset of data valid for updating the weight posterior of `var`.
 
-        1. Update weight posteriors for each graph given all accumulated data
-        2. Compute marginal likelihood for each graph on interventional data
-           (integrating weights from the PRIOR — this is the correct Bayesian
-           scoring for graph discrimination via Occam's razor)
-        3. Update graph belief: posterior proportional to marginal_lik * prior
+        Observational data is always included.  For each entry in
+        ``intervention_history``, rows produced by an intervention on ``var``
+        itself are excluded because those rows were generated under a hard
+        intervention on ``var`` and therefore carry no information about its
+        natural causal mechanism.
+
+        Parameters
+        ----------
+        var : str
+            The variable whose weight posterior will be updated.
+        obs_data : np.ndarray
+            Observational (baseline) data; always included.
+        intervention_history : list[tuple[str, np.ndarray]]
+            Sequence of ``(target_variable_name, data_array)`` tuples for every
+            intervention performed so far.
+        _cache : dict | None
+            Optional memoisation dict scoped to a single ``update()`` call.
+            Key = variable name, value = pre-computed vstacked array.  Must
+            *not* be stored on ``self``.
         """
-        est_data = all_data if all_data is not None else intv_data
+        if _cache is not None and var in _cache:
+            return _cache[var]
 
+        chunks = [obs_data]
+        for target, data in intervention_history:
+            if target != var:
+                chunks.append(data)
+
+        result = np.vstack(chunks)
+
+        if _cache is not None:
+            _cache[var] = result
+
+        return result
+
+    def update(self, obs_data: np.ndarray, intervention_history: list) -> np.ndarray:
+        """Bayesian update over graphs and weights using per-variable data masking.
+
+        1. Build per-variable data cache via _get_valid_data_for_var()
+        2. Update weight posteriors for each (graph, variable) using only valid data
+        3. Score each graph via marginal likelihood from the PRIOR
+        4. Compute belief from original prior (prior-based full re-scoring)
+        """
+        # Step 1 — Build per-variable data cache
+        cache = {}
+        for var in self.variable_order:
+            self._get_valid_data_for_var(var, obs_data, intervention_history, _cache=cache)
+
+        # Step 2 — Update weight posteriors
+        for k in range(self.K):
+            for var in self.variable_order:
+                valid_data = cache[var]
+                parents = self.get_parents(k, var)
+                if not parents:
+                    continue
+                pidx = [self.var_to_idx[p] for p in parents]
+                X_pa = valid_data[:, pidx]
+                j = self.var_to_idx[var]
+                y = valid_data[:, j]
+                self.weight_posteriors[k][var].update(X_pa, y)
+
+        # Step 3 — Score graphs using marginal likelihood from PRIOR
         log_liks = np.zeros(self.K)
         for k in range(self.K):
-            # Score new data against current posterior (before seeing new data)
-            log_liks[k] = self.compute_log_predictive_likelihood(k, intv_data, target_var)
+            for var in self.variable_order:
+                valid_data = cache[var]
+                parents = self.get_parents(k, var)
+                j = self.var_to_idx[var]
+                y = valid_data[:, j]
+                if parents:
+                    pidx = [self.var_to_idx[p] for p in parents]
+                    X_pa = valid_data[:, pidx]
+                    log_liks[k] += self.weight_posteriors[k][var].log_marginal_likelihood(X_pa, y)
+                else:
+                    log_liks[k] += norm.logpdf(y, 0, 1.0).sum()
 
-        # Now update weight posteriors with all data including new batch
-        for k in range(self.K):
-            self.update_weight_posteriors(k, est_data, target_var)
-
-        log_post = log_liks + np.log(self.belief + 1e-300)
+        # Step 4 — Compute belief from original prior (NOT running posterior)
+        log_post = log_liks + np.log(self.prior + 1e-300)
         log_post -= log_post.max()
         post = np.exp(log_post)
         post /= post.sum()
