@@ -18,7 +18,7 @@
     "max_iterations": 10,
     "convergence_threshold": 0.95,
     "acquisition_function": "expected_information_gain",
-    "n_eig_simulations": 100
+    "n_eig_simulations": 50
   },
   "scaling": {
     "n_repeats": 20,
