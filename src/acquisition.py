@@ -48,7 +48,7 @@ def expected_information_gain(scm: LinearGaussianSCM, belief: GraphBelief,
 
             log_liks = np.zeros(belief.K)
             for k in range(belief.K):
-                log_liks[k] = belief.compute_log_marginal_likelihood(
+                log_liks[k] = belief.compute_log_predictive_likelihood(
                     k, sim_data, target)
 
             # Simulated posterior

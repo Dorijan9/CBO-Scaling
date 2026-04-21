@@ -253,8 +253,12 @@ class GraphBelief:
 
         log_liks = np.zeros(self.K)
         for k in range(self.K):
+            # Score new data against current posterior (before seeing new data)
+            log_liks[k] = self.compute_log_predictive_likelihood(k, intv_data, target_var)
+
+        # Now update weight posteriors with all data including new batch
+        for k in range(self.K):
             self.update_weight_posteriors(k, est_data, target_var)
-            log_liks[k] = self.compute_log_marginal_likelihood(k, intv_data, target_var)
 
         log_post = log_liks + np.log(self.belief + 1e-300)
         log_post -= log_post.max()
