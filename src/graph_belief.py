@@ -267,17 +267,45 @@ class GraphBelief:
     def update(self, obs_data: np.ndarray, intervention_history: list) -> np.ndarray:
         """Bayesian update over graphs and weights using per-variable data masking.
 
-        1. Build per-variable data cache via _get_valid_data_for_var()
-        2. Update weight posteriors for each (graph, variable) using only valid data
-        3. Score each graph via marginal likelihood from the PRIOR
-        4. Compute belief from original prior (prior-based full re-scoring)
+        Phase 1: Score ONLY the new interventional batch using predictive likelihood
+                 from the current posterior (before incorporating new data).
+                 This gives sharp discrimination from interventional data.
+        Phase 2: Update weight posteriors with ALL properly-masked accumulated data.
+        Phase 3: Sequential belief update (multiply, don't re-score from scratch).
         """
-        # Step 1 — Build per-variable data cache
+        # The newest intervention is the last entry in history
+        new_target, new_intv_data = intervention_history[-1]
+
+        # --- Phase 1: Score new interventional batch BEFORE updating posteriors ---
+        # Uses predictive likelihood from the current posterior (trained on all
+        # PREVIOUS data). This is P(D_new | D_old, G_k) — each batch gets its
+        # full discriminative power without dilution by observational data.
+        log_liks = np.zeros(self.K)
+        for k in range(self.K):
+            for var in self.variable_order:
+                if var == new_target:
+                    continue  # intervened variable doesn't follow its SCM
+                j = self.var_to_idx[var]
+                y = new_intv_data[:, j]
+                parents = self.get_parents(k, var)
+                if not parents:
+                    log_liks[k] += norm.logpdf(y, 0, 1.0).sum()
+                else:
+                    pidx = [self.var_to_idx[p] for p in parents]
+                    X_pa = new_intv_data[:, pidx]
+                    wp = self.weight_posteriors[k].get(var)
+                    if wp is not None:
+                        log_liks[k] += wp.log_predictive_likelihood(X_pa, y)
+                    else:
+                        log_liks[k] += norm.logpdf(y, 0, np.sqrt(self.sigma_eps2)).sum()
+
+        # --- Phase 2: Update weight posteriors with ALL properly-masked data ---
+        # This uses per-variable masking: for each variable, only data rows where
+        # that variable was NOT the intervention target are included.
         cache = {}
         for var in self.variable_order:
             self._get_valid_data_for_var(var, obs_data, intervention_history, _cache=cache)
 
-        # Step 2 — Update weight posteriors
         for k in range(self.K):
             for var in self.variable_order:
                 valid_data = cache[var]
@@ -290,23 +318,11 @@ class GraphBelief:
                 y = valid_data[:, j]
                 self.weight_posteriors[k][var].update(X_pa, y)
 
-        # Step 3 — Score graphs using marginal likelihood from PRIOR
-        log_liks = np.zeros(self.K)
-        for k in range(self.K):
-            for var in self.variable_order:
-                valid_data = cache[var]
-                parents = self.get_parents(k, var)
-                j = self.var_to_idx[var]
-                y = valid_data[:, j]
-                if parents:
-                    pidx = [self.var_to_idx[p] for p in parents]
-                    X_pa = valid_data[:, pidx]
-                    log_liks[k] += self.weight_posteriors[k][var].log_marginal_likelihood(X_pa, y)
-                else:
-                    log_liks[k] += norm.logpdf(y, 0, 1.0).sum()
-
-        # Step 4 — Compute belief from original prior (NOT running posterior)
-        log_post = log_liks + np.log(self.prior + 1e-300)
+        # --- Phase 3: Sequential belief update ---
+        # Multiply new evidence with running belief (NOT re-score from self.prior).
+        # The telescoping product of predictive likelihoods equals the full
+        # marginal likelihood: P(D_1..T|G_k) = prod_t P(D_t|D_1..t-1, G_k).
+        log_post = log_liks + np.log(self.belief + 1e-300)
         log_post -= log_post.max()
         post = np.exp(log_post)
         post /= post.sum()
